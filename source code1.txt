@@ -1,0 +1,87 @@
+"use client";
+
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import type { Medication, Dose, Caregiver } from '@/lib/types';
+import { toast } from './use-toast';
+
+interface MedicationState {
+  medications: Medication[];
+  doseHistory: Dose[];
+  activeReminder: Medication | null;
+  caregiver: Caregiver | null;
+  addMedication: (medication: Omit<Medication, 'id'>) => void;
+  deleteMedication: (id: string) => void;
+  recordDose: (medication: Medication, status: 'taken' | 'missed') => void;
+  setActiveReminder: (medication: Medication | null) => void;
+  setCaregiverInfo: (caregiver: Caregiver) => void;
+}
+
+const sendAlert = (caregiver: Caregiver, medication: Medication) => {
+    const message = `A dose of ${medication.name} scheduled for ${medication.time} was missed. Notes: ${medication.notes || 'N/A'}`;
+    
+    console.log(`--- SIMULATING CAREGIVER ALERT ---`);
+    console.log(`To: ${caregiver.name}`);
+    console.log(`Email: ${caregiver.email}`);
+    console.log(`SMS: ${caregiver.phone}`);
+    console.log(`Message: ${message}`);
+    console.log(`---------------------------------`);
+
+    toast({
+        variant: "destructive",
+        title: "Caregiver Alert Sent (Simulated)",
+        description: `Alert for missed ${medication.name} dose sent to ${caregiver.name}.`,
+        duration: 5000,
+    });
+}
+
+export const useMedicationStore = create<MedicationState>()(
+  persist(
+    (set, get) => ({
+      medications: [],
+      doseHistory: [],
+      activeReminder: null,
+      caregiver: null,
+      addMedication: (medication) =>
+        set((state) => ({
+          medications: [...state.medications, { ...medication, id: new Date().toISOString() }],
+        })),
+      deleteMedication: (id) =>
+        set((state) => ({
+          medications: state.medications.filter((med) => med.id !== id),
+        })),
+      recordDose: (medication, status) => {
+        const now = new Date();
+        const scheduledTime = new Date();
+        const [hours, minutes] = medication.time.split(':').map(Number);
+        scheduledTime.setHours(hours, minutes, 0, 0);
+
+        const newDose: Dose = {
+          id: new Date().toISOString(),
+          medicationId: medication.id,
+          medicationName: medication.name,
+          scheduledTime: scheduledTime.toISOString(),
+          status,
+          recordedAt: now.toISOString(),
+        };
+
+        set((state) => ({
+          doseHistory: [newDose, ...state.doseHistory],
+        }));
+
+        if (status === 'missed') {
+          const caregiver = get().caregiver;
+          if (caregiver) {
+            sendAlert(caregiver, medication);
+          }
+        }
+      },
+      setActiveReminder: (medication) => set({ activeReminder: medication }),
+      setCaregiverInfo: (caregiver) => set({ caregiver }),
+    }),
+    {
+      name: 'dose-alert-storage',
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
+);

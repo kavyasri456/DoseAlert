@@ -1,0 +1,94 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useMedicationStore } from '@/hooks/use-medication-store';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { useToast } from '@/hooks/use-toast';
+import { BellRing } from 'lucide-react';
+
+const REMINDER_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+
+export function ReminderAlert() {
+  const { activeReminder, setActiveReminder, recordDose } = useMedicationStore();
+  const [timeLeft, setTimeLeft] = useState(REMINDER_DURATION_MS);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (!activeReminder) {
+      setTimeLeft(REMINDER_DURATION_MS);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setTimeLeft((prevTime) => {
+        if (prevTime <= 1000) {
+          clearInterval(interval);
+          handleMissed();
+          return 0;
+        }
+        return prevTime - 1000;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeReminder]);
+
+  const handleTaken = () => {
+    if (!activeReminder) return;
+    recordDose(activeReminder, 'taken');
+    toast({
+      title: "Great!",
+      description: `Dose for ${activeReminder.name} marked as taken.`,
+      className: "bg-green-100 border-green-300 text-green-800",
+    });
+    setActiveReminder(null);
+  };
+
+  const handleMissed = () => {
+    if (!activeReminder) return;
+    recordDose(activeReminder, 'missed');
+    setActiveReminder(null);
+  };
+
+  const progress = (timeLeft / REMINDER_DURATION_MS) * 100;
+  const minutesLeft = Math.floor(timeLeft / 60000);
+  const secondsLeft = Math.floor((timeLeft % 60000) / 1000);
+
+  return (
+    <Dialog open={!!activeReminder} onOpenChange={(isOpen) => !isOpen && setActiveReminder(null)}>
+      <DialogContent className="sm:max-w-[480px]" onInteractOutside={(e) => e.preventDefault()}>
+        <DialogHeader className="items-center text-center">
+            <BellRing className="h-16 w-16 text-primary animate-bounce"/>
+          <DialogTitle className="text-3xl font-headline mt-2">Time for your medication!</DialogTitle>
+          <DialogDescription className="text-lg">
+            It's time to take your <span className="font-bold text-primary">{activeReminder?.name}</span>.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4 space-y-4">
+          <div className="space-y-2">
+             <div className="text-center text-sm text-muted-foreground">
+                Automatically marking as missed in: {minutesLeft}:{secondsLeft < 10 ? `0${secondsLeft}` : secondsLeft}
+            </div>
+            <Progress value={progress} className="w-full h-4" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+            <Button variant="destructive" size="xl" onClick={handleMissed}>
+              Missed
+            </Button>
+            <Button
+                variant="default"
+                size="xl"
+                onClick={handleTaken}
+                className="bg-green-500 hover:bg-green-600 text-white"
+                >
+                Taken
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

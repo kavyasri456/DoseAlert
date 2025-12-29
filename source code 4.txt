@@ -1,0 +1,77 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Logo } from "@/components/icons";
+import { useMedicationStore } from '@/hooks/use-medication-store';
+import { useState } from 'react';
+
+export default function LoginPage() {
+  const router = useRouter();
+  const setCaregiverInfo = useMedicationStore((state) => state.setCaregiverInfo);
+  const [caregiverName, setCaregiverName] = useState('John Doe');
+  const [caregiverEmail, setCaregiverEmail] = useState('john.doe@example.com');
+  const [caregiverPhone, setCaregiverPhone] = useState('123-456-7890');
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setCaregiverInfo({
+      name: caregiverName,
+      email: caregiverEmail,
+      phone: caregiverPhone,
+    });
+    // Simulate successful login and set a token
+    localStorage.setItem('dose-alert-token', 'true');
+    router.replace('/dashboard');
+  };
+
+  return (
+    <main className="flex min-h-screen w-full flex-col items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-sm shadow-2xl">
+        <CardHeader className="items-center text-center">
+          <Logo />
+          <CardTitle className="text-3xl font-headline mt-4">Welcome to DoseAlert</CardTitle>
+          <CardDescription>Your friendly medication reminder app.</CardDescription>
+        </CardHeader>
+        <form onSubmit={handleLogin}>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Your Email</Label>
+              <Input id="email" type="email" placeholder="user@example.com" defaultValue="user@example.com" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Your Password</Label>
+              <Input id="password" type="password" defaultValue="password" />
+            </div>
+            <div className="space-y-2 pt-4 border-t">
+                 <p className="text-sm font-medium text-muted-foreground">Caregiver Information</p>
+                 <div className="space-y-2">
+                    <Label htmlFor="caregiverName">Name</Label>
+                    <Input id="caregiverName" type="text" placeholder="e.g., John Doe" value={caregiverName} onChange={(e) => setCaregiverName(e.target.value)} />
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="caregiverEmail">Email</Label>
+                    <Input id="caregiverEmail" type="email" placeholder="e.g., john.doe@example.com" value={caregiverEmail} onChange={(e) => setCaregiverEmail(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="caregiverPhone">Phone Number</Label>
+                    <Input id="caregiverPhone" type="tel" placeholder="e.g., 123-456-7890" value={caregiverPhone} onChange={(e) => setCaregiverPhone(e.target.value)} />
+                </div>
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button type="submit" size="xl" className="w-full">
+              Sign In
+            </Button>
+          </CardFooter>
+        </form>
+      </Card>
+      <p className="mt-4 text-center text-sm text-muted-foreground">
+        This is a demo. Any email and password will work.
+      </p>
+    </main>
+  );
+}
